@@ -77,7 +77,7 @@ Hero createHero(){
 		cin >> leerHero.features.attack;
 		cin.get();
 		cin >> leerHero.features.defense;
-		if(leerHero.features.attack + leerHero.features.defense != 100 || leerHero.features.attack < 0 || leerHero.features.defense < 0){
+		if(leerHero.features.attack + leerHero.features.defense != 100 || leerHero.features.attack <= 0 || leerHero.features.defense <= 0){
 			cout << "ERROR: wrong distribution" << endl;
 		}
 	}while(leerHero.features.attack + leerHero.features.defense != 100 || leerHero.features.attack <= 0 || leerHero.features.defense <= 0);
@@ -99,7 +99,7 @@ Hero createHero(){
 
 Enemy createEnemy(){
 	Enemy leerEnemy;
-	int dado; //variable pa guardar el lanzamiento
+	int dado; //variable pa guardar el lanzamiento y ver que raza toca
 	
 	dado=rollDice();
 	
@@ -205,15 +205,20 @@ void report(const Hero &hero){
 	}
 	cout << "-Total: " << suma << endl;
 }
-void fight(Hero &hero,Enemy &enemy){
+void fight(Hero &hero,Enemy &enemy, bool &okSpecial){
 	int dado1, dado2, heroe_hitP, expEnemigo;
 	int enemy_hitP;
 	
 
 	dado1= rollDice()*5; //para el ataque del heroe
 	dado2= rollDice()*5; //para la defensa del enemigo
-
-	heroe_hitP=(hero.features.attack + dado1) - (enemy.features.defense + dado2);
+	
+	if(okSpecial==true){
+		heroe_hitP=(hero.features.attack + (dado1*3)) - (enemy.features.defense + dado2);
+	}
+	else{
+		heroe_hitP=(hero.features.attack + dado1) - (enemy.features.defense + dado2);	
+	}
 	if(heroe_hitP < 0){
 		heroe_hitP=0;	
 	}
@@ -223,7 +228,16 @@ void fight(Hero &hero,Enemy &enemy){
 		enemy.features.hp=0;
 	}
 	cout << "[Hero -> Enemy] " << endl;
-	cout << "Attack: " << hero.features.attack << " + " << dado1 << endl;
+	cout << "Attack: " << hero.features.attack << " + ";
+	if(okSpecial == true){ 
+		cout << dado1*3<< endl;
+		okSpecial=false;
+	}
+	else{
+		cout << dado1 << endl;
+	}
+
+	
 	cout << "Defense: " << enemy.features.defense << " + " << dado2 << endl;
 	cout << "Hit points: " << heroe_hitP << endl;
 	cout << "Enemy health points: " <<  enemy.features.hp << endl;
@@ -248,6 +262,7 @@ void fight(Hero &hero,Enemy &enemy){
 				expEnemigo=400;
 				break;
 		}
+		hero.kills[enemy.name]++;
 		hero.exp+=expEnemigo;
 		enemy=createEnemy();
 		imprimirEnemigo(enemy);
@@ -265,7 +280,7 @@ void fight(Hero &hero,Enemy &enemy){
 		if(hero.features.hp <= 0){
 				hero.features.hp=0;
 		}
-		cout << "[Enemy -> Heroe] " << endl;
+		cout << "[Enemy -> Hero] " << endl;
 		cout << "Attack: " << enemy.features.attack << " + " << dado1 << endl;
 		cout << "Defense: " << hero.features.defense << " + " << dado2 << endl;
 		cout << "Hit points: " << enemy_hitP << endl;
@@ -294,7 +309,10 @@ int main(int argc,char *argv[]){
 	Hero miHeroe;
 	Enemy miEnemigo;
 	char op; //opcion a elegir en el menu
-
+	bool okCorrer; //Saber si puedo usar el runaway
+	bool okSpecial;//Saber si he usado el special
+	okCorrer=true;	
+	okSpecial=false;
 	if(argc!=2){ // Si los parámetros no son correctos, el programa termina inmediatamente
 		cout << "Usage: " << argv[0] << " <seed>" << endl;
 	}
@@ -310,20 +328,37 @@ int main(int argc,char *argv[]){
 				cin >> op;
 				switch(op){
 					case '1':
-						fight(miHeroe, miEnemigo);
+						fight(miHeroe, miEnemigo, okSpecial);
+						okCorrer=true;
 						break;
 					case '2':
-						if(miHeroe.runaways == 0){
-							cout << "Error: cannot run away" << endl;
+						if(miHeroe.runaways == 0 || okCorrer==false){
+							cout << "ERROR: cannot run away" << endl;
 						}
 						else{
-							cout << "You run away" << endl;
+							if(okCorrer == true){
+								cout << "You run away" << endl;
+								miEnemigo=createEnemy();
+								imprimirEnemigo(miEnemigo);
+								miHeroe.runaways--;
+								okCorrer=false; //para que no pueda huir dos veces
+							}
 						}
 						break;
 					case '3':
+						if(miHeroe.special==false){
+							cout << "ERROR: special not available" << endl;
+						}
+						else{
+							okSpecial=true;
+							fight(miHeroe, miEnemigo, okSpecial);
+							okCorrer=true;
+							miHeroe.special=false;
+						}
 						break;
 					case '4':
 						report(miHeroe);
+						
 						break;
 					case'q':
 						break;
