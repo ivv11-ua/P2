@@ -5,6 +5,7 @@
 #include <vector>
 #include <cctype>
 #include <cstring>
+#include <fstream>
 
 using namespace std;
 
@@ -91,15 +92,21 @@ void showMainMenu(){
 }
 
 void showCatalog(const BookStore &bookStore){
-	for(int i = 0; i < bookStore.books.size(); i++){
+	for(unsigned int i = 0; i < bookStore.books.size(); i++){
 		cout << bookStore.books[i].id << ". ";
-		cout << bookStore.books[i].title << " (";
-		cout << bookStore.books[i].year << "), ";
+		cout << bookStore.books[i].title;
+		cout << " (" << bookStore.books[i].year << "), ";
 		cout << bookStore.books[i].price << endl;
 	}
 }
 
 void showExtendedCatalog(const BookStore &bookStore){
+	char n='"';
+	for(unsigned int i=0; i < bookStore.books.size(); i++){
+		cout << n << bookStore.books[i].title << n << "," << n << bookStore.books[i].authors;
+		cout << n << "," << bookStore.books[i].year << "," << n;
+		cout << bookStore.books[i].slug << n << "," << bookStore.books[i].price << endl;
+	}
 }
 
 bool comprobarTitulo(string cad){
@@ -205,8 +212,19 @@ string funcionSlug(string slug, int tam){
 	tam=slug.length();
 	//Eliminar guiones repetidos del medio
 	for(int i=0; i < tam; i++){
-		if(slug[i] != slug[i+1] || i==tam-1){
+		if(i==tam-1){
 			resultado=resultado+slug[i];
+		}
+		else{
+			if(slug[i] == '-'){
+				if(slug[i] != slug[i+1]){
+					resultado=resultado+slug[i];
+				}
+			}
+			else{
+				resultado= resultado + slug[i];
+			}
+			
 		}
 	}
 	slug=resultado;
@@ -279,21 +297,53 @@ void addBook(BookStore &bookStore){
 	resultado=funcionSlug(slug,tam);
 
 	newBook.slug=resultado;
-	cout << newBook.slug << endl;
-	
 	bookStore.books.push_back(newBook);
 }
 
-void deleteBook(BookStore &bookStore){
+int buscarIdLibro(const vector<Book> &books,unsigned int id){
+	int position;
+	int tam=books.size();
+
+	position=-1; //consideramos el -1, y si encontramos el libro cambiar el valor de position
+	for(int i= 0; i < tam && position==-1; i++){
+		if(books[i].id == id){
+			position=i;
+		}	
+	}
+	return position;
 }
 
-void importExportMenu(BookStore &bookStore){
+
+void deleteBook(BookStore &bookStore){
+	string book;
+	int tamanyo, position, id;
+
+	cout << "Enter book id: ";
+	getline(cin, book);
+	tamanyo=book.length();
+	if(tamanyo==0){
+		error(ERR_ID);
+	}
+	else{
+		id=stoi(book); //pasar el string a int, lo cogemos como string para comprobar cadena vacia
+		position=buscarIdLibro(bookStore.books, id); //encontrar en que posicion esta el libro
+		if(position != -1){
+			bookStore.books.erase(bookStore.books.begin()+position);
+		}
+		else{
+			error(ERR_ID);
+		}
+	}
 }
+
+
 
 void importFromCsv(BookStore &bookStore){
+	
 }
 
 void exportToCsv(const BookStore &bookStore){
+	
 }
 
 void loadData(BookStore &bookStore){
@@ -302,19 +352,59 @@ void loadData(BookStore &bookStore){
 void saveData(const BookStore &bookStore){
 }
 
+
+void showMenuExterior(){
+	cout << "[Import/export options]" << endl;
+	cout << "1- Import from CSV" << endl;
+	cout << "2- Export to CSV" << endl;
+	cout << "3- Load data" << endl;
+	cout << "4- Save data" << endl;
+	cout << "b- Back to main menu" << endl;
+	cout << "Option: ";
+}	
+
+void importExportMenu(BookStore &bookStore){
+	char option;
+	do{
+		showMenuExterior();
+		cin >> option;
+		cin.get();
+	
+		switch(option){
+			case '1':
+				importFromCsv(bookStore);
+			break;
+			case '2':
+				exportToCsv(bookStore);
+			break;
+			case '3':
+				loadData(bookStore);
+			break;
+			case '4':
+				saveData(bookStore);
+			break;
+			case 'b':
+			break;
+			default:
+				error(ERR_OPTION);
+			break;
+		}
+	}while(option != 'b');
+}
+
 int main(int argc, char *argv[]){
   BookStore bookStore;               //mi libreria
   bookStore.name = "My Book Store";  //nombre de la libreria
   bookStore.nextId = 1;              //id automatico para el siguiente libro
 	
-  cout << bookStore.name.length() << endl;
+  
   char option;
   do{
     showMainMenu();
     cin >> option;
     cin.get();
 
-    switch(option) {
+    switch(option){
       case '1':
         showCatalog(bookStore);
         break;
