@@ -6,7 +6,7 @@
 #include <cctype>
 #include <cstring>
 #include <fstream>
-
+#include <sstream>
 using namespace std;
 
 const int KMAXSTRING = 50;
@@ -187,7 +187,7 @@ string funcionSlug(string slug, int tam){
 	for(int i=0; i < tam; i++){
 		slug[i]=tolower(slug[i]);
 	}
-	//Cambiar caracteres que no sean nums y letras, tmb espacios a -
+	//Cambiar caracteres que no sean nums y letras, tambien espacios a -
 	for(int i=0; i < tam; i++){
 		if(isalnum(slug[i]) == 0 || slug[i]==' '){
 			slug[i]='-';
@@ -337,13 +337,85 @@ void deleteBook(BookStore &bookStore){
 }
 
 
-
 void importFromCsv(BookStore &bookStore){
+	Book newBook;
+	ifstream fichero;
+	string nombreFich;
+	string linea; //linea que leo del fichero
+	bool okTitle;
+	bool okAuthor;
+	bool okYear;
+	bool okPrice;
+	string anyo;
+	string precio;
+	int year;
+	float price;
 	
+	cout << "Enter filename: "; //nombre del fichero que quieres buscar donde están almacenados los libros
+	getline(cin,nombreFich);
+	
+	fichero.open(nombreFich.c_str());
+	if(fichero.is_open()){
+		fichero.get();
+		while(!fichero.eof()){  //while(getline(fichero,filname)
+			getline(fichero, newBook.title, '"');
+			fichero.get(); fichero.get();
+			getline(fichero, newBook.authors, '"');
+			fichero.get();
+
+			getline(fichero,anyo,',');
+			fichero.get();
+
+			getline(fichero, newBook.slug, '"');
+			fichero.get();
+			
+			getline(fichero,precio,'\n');
+			fichero.get();
+					
+			okTitle=comprobarTitulo(newBook.title);
+			okAuthor=comprobarTitulo(newBook.authors);
+			okYear=comprobarAnyo(anyo,year);
+			okPrice=comprobarPrecio(precio, price);
+			
+			newBook.year=year;
+			newBook.price=price;
+			if(okTitle && okAuthor && okYear && okPrice){
+				newBook.id = bookStore.nextId;
+				bookStore.nextId++;
+				bookStore.books.push_back(newBook);
+			}		
+		}
+		fichero.close();
+	}
+	else{
+		error(ERR_FILE);
+	}
 }
 
 void exportToCsv(const BookStore &bookStore){
+	int tamanyo;
+	ofstream fichero;
+	string nombreFich;
+	char n='"';
 	
+	tamanyo=bookStore.books.size();
+	cout << "Enter filename: ";
+	getline(cin,nombreFich);
+	
+	fichero.open(nombreFich.c_str()); //pasarlo a vector de caracteres	
+	if(fichero.is_open()){
+		for(int i=0; i < tamanyo; i++){
+			fichero << n << bookStore.books[i].title << n << ",";
+			fichero << n << bookStore.books[i].authors <<  n << ",";
+			fichero << bookStore.books[i].year << ",";
+			fichero << n << bookStore.books[i].slug << n << ",";
+			fichero << bookStore.books[i].price << endl;	
+		}
+		fichero.close();
+	}
+	else{
+		error(ERR_FILE);
+	} 
 }
 
 void loadData(BookStore &bookStore){
@@ -351,7 +423,6 @@ void loadData(BookStore &bookStore){
 
 void saveData(const BookStore &bookStore){
 }
-
 
 void showMenuExterior(){
 	cout << "[Import/export options]" << endl;
@@ -391,6 +462,8 @@ void importExportMenu(BookStore &bookStore){
 		}
 	}while(option != 'b');
 }
+
+
 
 int main(int argc, char *argv[]){
   BookStore bookStore;               //mi libreria
