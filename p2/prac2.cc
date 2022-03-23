@@ -3,7 +3,6 @@
 // Nombre: Iván Valor Verdú
 #include <iostream>
 #include <vector>
-#include <cctype>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -341,15 +340,13 @@ void importFromCsv(BookStore &bookStore){
 	Book newBook;
 	ifstream fichero;
 	string nombreFich;
-	string linea; //linea que leo del fichero
-	bool okTitle;
-	bool okAuthor;
-	bool okYear;
-	bool okPrice;
-	string anyo;
-	string precio;
-	int year;
-	float price;
+	
+
+	bool okTitle,okAuthor,okYear,okPrice; //variables para hacer la comprobación de los distintos campos
+	string anyo, precio; //lo guardo como string para saber si el campo es cadena vacia o no
+	
+	int year; 	//guardo el año despues de hacer la comprobacion
+	float price;	//guardo el price después de hacer la comprobación
 	
 	cout << "Enter filename: "; //nombre del fichero que quieres buscar donde están almacenados los libros
 	getline(cin,nombreFich);
@@ -357,7 +354,7 @@ void importFromCsv(BookStore &bookStore){
 	fichero.open(nombreFich.c_str());
 	if(fichero.is_open()){
 		fichero.get();
-		while(!fichero.eof()){  //while(getline(fichero,filname)
+		while(!fichero.eof()){  
 			getline(fichero, newBook.title, '"');
 			fichero.get(); fichero.get();
 			getline(fichero, newBook.authors, '"');
@@ -369,21 +366,41 @@ void importFromCsv(BookStore &bookStore){
 			getline(fichero, newBook.slug, '"');
 			fichero.get();
 			
-			getline(fichero,precio,'\n');
+			getline(fichero,precio); //me quita el primer salto de linea
 			fichero.get();
+			
 					
 			okTitle=comprobarTitulo(newBook.title);
 			okAuthor=comprobarTitulo(newBook.authors);
 			okYear=comprobarAnyo(anyo,year);
 			okPrice=comprobarPrecio(precio, price);
-			
+				
 			newBook.year=year;
 			newBook.price=price;
 			if(okTitle && okAuthor && okYear && okPrice){
 				newBook.id = bookStore.nextId;
 				bookStore.nextId++;
 				bookStore.books.push_back(newBook);
-			}		
+			}
+			else{
+				if(!okTitle){
+					error(ERR_BOOK_TITLE);
+				}
+				else{
+					if(!okAuthor){
+						error(ERR_BOOK_AUTHORS);
+					}
+					else{
+						if(!okYear){
+							error(ERR_BOOK_DATE);
+						}
+						else{			
+							error(ERR_BOOK_PRICE);
+						}	
+					}
+				}
+			}
+					
 		}
 		fichero.close();
 	}
@@ -405,11 +422,11 @@ void exportToCsv(const BookStore &bookStore){
 	fichero.open(nombreFich.c_str()); //pasarlo a vector de caracteres	
 	if(fichero.is_open()){
 		for(int i=0; i < tamanyo; i++){
-			fichero << n << bookStore.books[i].title << n << ",";
-			fichero << n << bookStore.books[i].authors <<  n << ",";
-			fichero << bookStore.books[i].year << ",";
-			fichero << n << bookStore.books[i].slug << n << ",";
-			fichero << bookStore.books[i].price << endl;	
+			fichero << n << bookStore.books[i].title << n << ","
+			 	<< n << bookStore.books[i].authors <<  n << ","
+				<< bookStore.books[i].year << ","
+				<< n << bookStore.books[i].slug << n << ","
+				<< bookStore.books[i].price << endl;	
 		}
 		fichero.close();
 	}
@@ -419,9 +436,92 @@ void exportToCsv(const BookStore &bookStore){
 }
 
 void loadData(BookStore &bookStore){
-}
+	ifstream fichero;
+	string nombreFich;
+	BinBookStore bbs;  
+	BinBook bb;  
+	Book leido;
+      	char op;
 
-void saveData(const BookStore &bookStore){
+	do{		
+		cout << "All data will be erased, do you want to continue (Y/N)?:";
+		cin >> op;
+		cin.get();
+	}while(op !='N' && op != 'n' && op != 'Y' && op != 'y');
+	
+	if(op == 'Y' || op== 'y'){
+		cout << "Enter filename: ";
+		getline(cin,nombreFich);
+
+		fichero.open(nombreFich.c_str(),ios::binary);
+		if(fichero.is_open()){
+			bookStore.books.clear();
+			
+			fichero.read((char *)&bbs, sizeof(bbs));
+			bookStore.name=bbs.name;
+			bookStore.nextId=bbs.nextId;
+
+			fichero.read((char *)&bb, sizeof(bb));
+			while(!fichero.eof()){
+				leido.id=bb.id;
+				leido.title=bb.title;
+				leido.authors=bb.authors;
+				leido.year=bb.year;
+				leido.slug=bb.slug;
+				leido.price=bb.price;
+				bookStore.books.push_back(leido);
+				fichero.read((char *)&bb, sizeof(bb));
+			}
+			fichero.close();
+		}
+		else{
+			error(ERR_FILE);
+		} 
+		
+	}
+}
+void bookAbinBook(const Book &b, BinBook &bb){
+	bb.id=b.id;
+	strncpy(bb.title,b.title.c_str(),KMAXSTRING);
+	bb.title[KMAXSTRING-1]='\0';
+
+	strncpy(bb.authors,b.authors.c_str(),KMAXSTRING);
+	bb.authors[KMAXSTRING-1]='\0';
+
+	bb.year=b.year;
+			
+	strncpy(bb.slug,b.slug.c_str(),KMAXSTRING);
+	bb.slug[KMAXSTRING-1]='\0';
+			
+	bb.price=b.price;
+}
+void saveData(const BookStore &bookStore){ //guardar datos en un fichero binario
+	ofstream fichero;
+	string nombreFich;
+
+	BinBookStore bbs;   //para pasar la librería al fichero binario
+	BinBook bb;         //para pasar el libro al fichero binario
+
+	cout << "Enter filename: ";
+	getline(cin, nombreFich);
+
+	fichero.open(nombreFich.c_str(),ios::binary);
+	if(fichero.is_open()){
+		bbs.nextId=bookStore.nextId;
+		strncpy(bbs.name,bookStore.name.c_str(), KMAXSTRING);
+		bbs.name[KMAXSTRING-1]='\0';
+		
+		fichero.write((const char*)&bbs, sizeof(bbs));
+
+		for(unsigned int i=0; i < bookStore.books.size(); i++){
+			bookAbinBook(bookStore.books[i], bb);
+			fichero.write((const char*) &bb, sizeof(bb));
+		};
+		fichero.close();
+	}
+	else{
+		error(ERR_FILE);
+	} 
 }
 
 void showMenuExterior(){
