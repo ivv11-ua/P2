@@ -92,19 +92,19 @@ void showMainMenu(){
 
 void showCatalog(const BookStore &bookStore){
 	for(unsigned int i = 0; i < bookStore.books.size(); i++){
-		cout << bookStore.books[i].id << ". ";
-		cout << bookStore.books[i].title;
-		cout << " (" << bookStore.books[i].year << "), ";
-		cout << bookStore.books[i].price << endl;
+		cout << bookStore.books[i].id << ". " 
+		     << bookStore.books[i].title
+		     << " (" << bookStore.books[i].year << "), "
+		     << bookStore.books[i].price << endl;
 	}
 }
 
 void showExtendedCatalog(const BookStore &bookStore){
 	char n='"';
 	for(unsigned int i=0; i < bookStore.books.size(); i++){
-		cout << n << bookStore.books[i].title << n << "," << n << bookStore.books[i].authors;
-		cout << n << "," << bookStore.books[i].year << "," << n;
-		cout << bookStore.books[i].slug << n << "," << bookStore.books[i].price << endl;
+		cout << n << bookStore.books[i].title << n << "," << n << bookStore.books[i].authors
+		     << n << "," << bookStore.books[i].year << "," << n
+		     << bookStore.books[i].slug << n << "," << bookStore.books[i].price << endl;
 	}
 }
 
@@ -146,7 +146,7 @@ bool comprobarAnyo(string a,int &anyo){
 		}
 		if(okAnyo!=false){   //entramos si aún no es false
 			anyo=stoi(a);
-			if(anyo<=1440 || anyo>=2022){
+			if(anyo<1440 || anyo>2022){
 				okAnyo=false;
 			}
 		}
@@ -180,13 +180,17 @@ bool comprobarPrecio(string p,float &precio){
  	}
 	return okPrecio;
 }
-string funcionSlug(string slug, int tam){
+
+string funcionSlug(string slug){
+	int tam;
 	string resultado;
+	tam=slug.length();
+	
 	//Cambiar mayusculas por minusculas
 	for(int i=0; i < tam; i++){
 		slug[i]=tolower(slug[i]);
 	}
-	//Cambiar caracteres que no sean nums y letras, tambien espacios a -
+	//Cambiar caracteres que no sean nums ni letras ni espacios a '-'
 	for(int i=0; i < tam; i++){
 		if(isalnum(slug[i]) == 0 || slug[i]==' '){
 			slug[i]='-';
@@ -230,45 +234,35 @@ string funcionSlug(string slug, int tam){
 	return slug;
 }
 
-void addBook(BookStore &bookStore){
-	Book newBook;
-	bool okCadena;		//variable para almacenar lo que devuelve la función comprobarTitulo
-   	bool okAnyo; 		//variable para almacenar lo que devuelve la funcion comporbarAnyo
-	bool okPrecio;		//variable para almacenar lo que devuelve la funcion comporbarPrecio
-	
-	int tam;
-	int year; 		//almacenar el valor que convertimos con el stoi a int
-	float price;		//almacenar el valor que convertimos con el stof a float
-	string anyo; 		//almacenar el anyo en string
-	string precio;		//almacenar el precio en string
-	string slug;
-	string resultado="";    //cadena donde guardo la modificacion del slug
-
-   	newBook.id=bookStore.nextId;
-    	bookStore.nextId++;
-    
-    
-    	do{
+void titulo(Book &b){
+	bool okCadena;
+	do{
         
         cout << "Enter book title: ";
-        getline(cin,newBook.title);
+        getline(cin,b.title);
 
-        okCadena=comprobarTitulo(newBook.title);
+        okCadena=comprobarTitulo(b.title);
 		if(!okCadena){
 			error(ERR_BOOK_TITLE);
     		}
-    	}while(okCadena == false);
-	
+    	}while(!okCadena);
+}
+void autor(Book &b){
+	bool okCadena;
 	do{
 		cout << "Enter author(s): ";
-		getline(cin, newBook.authors);
+		getline(cin, b.authors);
 		
-		okCadena=comprobarTitulo(newBook.authors); //usamos el mismo módulo que antes
+		okCadena=comprobarTitulo(b.authors); //usamos el mismo módulo que antes
 		if(!okCadena){
 			error(ERR_BOOK_AUTHORS);
     		}
-	}while(okCadena==false);
-	
+	}while(!okCadena);
+}
+void anyo(Book &b){
+	bool okAnyo;
+	int year; //almacenar el valor que convertimos con el stoi a int
+	string anyo;//almacenar en string para comprobar que no este vacio
 	do{
 		cout << "Enter publication year: ";
  		getline(cin, anyo);
@@ -277,9 +271,13 @@ void addBook(BookStore &bookStore){
 		if(!okAnyo){
 			error(ERR_BOOK_DATE);
     		}
-	}while(okAnyo==false);
-	newBook.year=year;//guardamos el año como int
-	
+	}while(!okAnyo);
+	b.year=year;//guardamos el año como in
+}
+void precio(Book &b){
+	float price;	//almacenar el valor que convertimos con el stof a float
+	string precio;  //almacenar en string para comprobar que no este vacio  
+	bool okPrecio;
 	do{
 		cout << "Enter price: ";
 		getline(cin, precio);
@@ -287,15 +285,27 @@ void addBook(BookStore &bookStore){
 		if(!okPrecio){
 			error(ERR_BOOK_PRICE);
     		}
-	}while(okPrecio==false);
-	newBook.price=price;
-	
-	slug=newBook.title;
-	tam=slug.length();
-	
-	resultado=funcionSlug(slug,tam);
+	}while(!okPrecio);
+	b.price=price;
+}
+void addBook(BookStore &bookStore){
+	Book newBook;
+	string slug, resultado; //almacenar en string para comprobar que no este vacio
+	resultado="";    //cadena donde guardo la modificacion del slug
 
+   	newBook.id=bookStore.nextId;
+    	bookStore.nextId++;
+    
+    	titulo(newBook);
+	autor(newBook);
+    	anyo(newBook);
+	precio(newBook);
+	
+	
+	slug=newBook.title;	
+	resultado=funcionSlug(slug);
 	newBook.slug=resultado;
+
 	bookStore.books.push_back(newBook);
 }
 
@@ -335,22 +345,54 @@ void deleteBook(BookStore &bookStore){
 	}
 }
 
-
-void importFromCsv(BookStore &bookStore){
-	Book newBook;
-	ifstream fichero;
-	string nombreFich;
-	
-
-	bool okTitle,okAuthor,okYear,okPrice; //variables para hacer la comprobación de los distintos campos
-	string anyo, precio; //lo guardo como string para saber si el campo es cadena vacia o no
-	
+void comprobarCampos(BookStore &bookStore,Book newBook,string a,string p){
 	int year; 	//guardo el año despues de hacer la comprobacion
 	float price;	//guardo el price después de hacer la comprobación
 	
-	cout << "Enter filename: "; //nombre del fichero que quieres buscar donde están almacenados los libros
-	getline(cin,nombreFich);
+	bool okTitle,okAuthor,okYear,okPrice; //variables para hacer la comprobación de los distintos campos
+			
+	okTitle=comprobarTitulo(newBook.title);
+	okAuthor=comprobarTitulo(newBook.authors);
+	okYear=comprobarAnyo(a,year);
+	okPrice=comprobarPrecio(p, price);
+				
+	newBook.year=year;
+	newBook.price=price;
+	if(okTitle && okAuthor && okYear && okPrice){
+		newBook.id = bookStore.nextId;
+		bookStore.nextId++;
+		bookStore.books.push_back(newBook);
+	}
+	else{
+		if(!okTitle){
+			error(ERR_BOOK_TITLE);
+		}
+		else{
+			if(!okAuthor){
+				error(ERR_BOOK_AUTHORS);
+			}
+			else{
+				if(!okYear){
+					error(ERR_BOOK_DATE);
+				}
+				else{			
+					error(ERR_BOOK_PRICE);
+				}	
+			}
+		}
+	}
+}
+
+void importFromCsv(BookStore &bookStore, string nombreFich){
+	Book newBook;
+	ifstream fichero;
+	string anyo, precio; //lo guardo como string para saber si el campo es cadena vacia o no
 	
+
+	if(nombreFich==""){
+		cout << "Enter filename: "; //nombre del fichero que quieres buscar donde están almacenados los libros
+		getline(cin,nombreFich);
+	}
 	fichero.open(nombreFich.c_str());
 	if(fichero.is_open()){
 		fichero.get();
@@ -366,40 +408,10 @@ void importFromCsv(BookStore &bookStore){
 			getline(fichero, newBook.slug, '"');
 			fichero.get();
 			
-			getline(fichero,precio); //me quita el primer salto de linea
+			getline(fichero,precio); //quita el salto de linea
 			fichero.get();
 			
-					
-			okTitle=comprobarTitulo(newBook.title);
-			okAuthor=comprobarTitulo(newBook.authors);
-			okYear=comprobarAnyo(anyo,year);
-			okPrice=comprobarPrecio(precio, price);
-				
-			newBook.year=year;
-			newBook.price=price;
-			if(okTitle && okAuthor && okYear && okPrice){
-				newBook.id = bookStore.nextId;
-				bookStore.nextId++;
-				bookStore.books.push_back(newBook);
-			}
-			else{
-				if(!okTitle){
-					error(ERR_BOOK_TITLE);
-				}
-				else{
-					if(!okAuthor){
-						error(ERR_BOOK_AUTHORS);
-					}
-					else{
-						if(!okYear){
-							error(ERR_BOOK_DATE);
-						}
-						else{			
-							error(ERR_BOOK_PRICE);
-						}	
-					}
-				}
-			}
+			comprobarCampos(bookStore,newBook,anyo, precio);
 					
 		}
 		fichero.close();
@@ -435,24 +447,34 @@ void exportToCsv(const BookStore &bookStore){
 	} 
 }
 
-void loadData(BookStore &bookStore){
+void binBookAbook(Book &b,const BinBook bb){
+	b.id=bb.id;
+	b.title=bb.title;
+	b.authors=bb.authors;
+	b.year=bb.year;
+	b.slug=bb.slug;
+	b.price=bb.price;			
+}
+void loadData(BookStore &bookStore,string nombreFich){
 	ifstream fichero;
-	string nombreFich;
 	BinBookStore bbs;  
 	BinBook bb;  
 	Book leido;
       	char op;
-
-	do{		
-		cout << "All data will be erased, do you want to continue (Y/N)?:";
-		cin >> op;
-		cin.get();
-	}while(op !='N' && op != 'n' && op != 'Y' && op != 'y');
+	
+	if(nombreFich==""){ //entra si vengo de menu
+		do{		
+			cout << "All data will be erased, do you want to continue (Y/N)?:";
+			cin >> op;
+			cin.get();
+		}while(op !='N' && op != 'n' && op != 'Y' && op != 'y');
+	}
 	
 	if(op == 'Y' || op== 'y'){
-		cout << "Enter filename: ";
-		getline(cin,nombreFich);
-
+		if(nombreFich==""){
+			cout << "Enter filename: ";
+			getline(cin,nombreFich);
+		}
 		fichero.open(nombreFich.c_str(),ios::binary);
 		if(fichero.is_open()){
 			bookStore.books.clear();
@@ -463,12 +485,7 @@ void loadData(BookStore &bookStore){
 
 			fichero.read((char *)&bb, sizeof(bb));
 			while(!fichero.eof()){
-				leido.id=bb.id;
-				leido.title=bb.title;
-				leido.authors=bb.authors;
-				leido.year=bb.year;
-				leido.slug=bb.slug;
-				leido.price=bb.price;
+				binBookAbook(leido, bb);
 				bookStore.books.push_back(leido);
 				fichero.read((char *)&bb, sizeof(bb));
 			}
@@ -480,6 +497,7 @@ void loadData(BookStore &bookStore){
 		
 	}
 }
+
 void bookAbinBook(const Book &b, BinBook &bb){
 	bb.id=b.id;
 	strncpy(bb.title,b.title.c_str(),KMAXSTRING);
@@ -543,13 +561,13 @@ void importExportMenu(BookStore &bookStore){
 	
 		switch(option){
 			case '1':
-				importFromCsv(bookStore);
+				importFromCsv(bookStore,"");
 			break;
 			case '2':
 				exportToCsv(bookStore);
 			break;
 			case '3':
-				loadData(bookStore);
+				loadData(bookStore,"");
 			break;
 			case '4':
 				saveData(bookStore);
@@ -563,42 +581,99 @@ void importExportMenu(BookStore &bookStore){
 	}while(option != 'b');
 }
 
-
+bool comprobarArgumentos(int argc, char *argv[], string &fichTxt, string &fichBin){
+	bool ok=false;
+	fichTxt="";
+	fichBin="";
+	if(argc == 1){
+		ok=true;
+	}
+	else{
+		if(argc==3){
+			if(strcmp(argv[1], "-i") == 0){
+				ok=true;
+				fichTxt=argv[2];
+			}
+			else{
+				if(strcmp(argv[1], "-l")==0){
+					ok=true;
+					fichBin=argv[2];
+					
+				}
+			}	
+		}
+		else{
+			if(argc == 5){
+				if(strcmp(argv[1], "-i") == 0 && strcmp(argv[3], "-l") == 0){
+					ok=true;
+					fichTxt=argv[2];
+					fichBin=argv[4];
+					
+				} 
+			}
+			else{
+				if(strcmp(argv[1], "-l") == 0 && strcmp(argv[3], "-i") == 0){
+					ok=true;
+					fichBin=argv[2];
+					fichTxt=argv[4];
+					ok=true;
+				} 
+			}
+		}
+	}
+	return ok;
+}
 
 int main(int argc, char *argv[]){
-  BookStore bookStore;               //mi libreria
-  bookStore.name = "My Book Store";  //nombre de la libreria
-  bookStore.nextId = 1;              //id automatico para el siguiente libro
-	
+	BookStore bookStore;               //mi libreria
+	bookStore.name = "My Book Store";  //nombre de la libreria
+	bookStore.nextId = 1;              //id automatico para el siguiente libro
   
-  char option;
-  do{
-    showMainMenu();
-    cin >> option;
-    cin.get();
+  	bool ok; //saber si argumentos están bien
+	char option;
+	string nomBin, nomTxt;
+	
+	ok=comprobarArgumentos(argc, argv, nomTxt, nomBin);
 
-    switch(option){
-      case '1':
-        showCatalog(bookStore);
-        break;
-      case '2':
-        showExtendedCatalog(bookStore);
-        break;
-      case '3':
-        addBook(bookStore);
-        break;
-      case '4':
-        deleteBook(bookStore);
-        break;
-      case '5':
-        importExportMenu(bookStore);
-        break;
-      case 'q':
-        break;
-      default:
-        error(ERR_OPTION);
-    }
-  }while(option != 'q');
+	if(ok==false){
+		error(ERR_ARGS);
+	}
+	else{
+		if(!nomBin.empty()){ //si no está vacio lo añado
+			loadData(bookStore, nomBin);
+		}
+		if(!nomTxt.empty()){ //si no está vacio lo añado
+			importFromCsv(bookStore, nomTxt);
+		}
+		do{
+			showMainMenu();
+			cin >> option;
+			cin.get();
 
-  return 0;
+			switch(option){
+					case '1':
+						showCatalog(bookStore);
+					break;
+				case '2':
+					showExtendedCatalog(bookStore);
+					break;
+				case '3':
+					addBook(bookStore);
+					break;
+				case '4':
+					deleteBook(bookStore);
+					break;
+				case '5':
+					importExportMenu(bookStore);
+					break;
+				case 'q':
+					break;
+				default:
+					error(ERR_OPTION);
+					break;
+			}
+		}while(option != 'q');
+	}
+
+return 0;
 }
