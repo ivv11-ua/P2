@@ -383,11 +383,11 @@ void comprobarCampos(BookStore &bookStore,Book newBook,string a,string p){
 	}
 }
 
-void importFromCsv(BookStore &bookStore, string nombreFich){
+void importFromCsv(BookStore &bookStore, string nombreFich, bool &abierto){
 	Book newBook;
 	ifstream fichero;
 	string anyo, precio; //lo guardo como string para saber si el campo es cadena vacia o no
-	
+	abierto=false; //saber si lo abro y no mostrar el menu cuando cargo argumentos
 
 	if(nombreFich==""){
 		cout << "Enter filename: "; //nombre del fichero que quieres buscar donde están almacenados los libros
@@ -395,6 +395,7 @@ void importFromCsv(BookStore &bookStore, string nombreFich){
 	}
 	fichero.open(nombreFich.c_str());
 	if(fichero.is_open()){
+		abierto=true;
 		fichero.get();
 		while(!fichero.eof()){  
 			getline(fichero, newBook.title, '"');
@@ -455,11 +456,12 @@ void binBookAbook(Book &b,const BinBook bb){
 	b.slug=bb.slug;
 	b.price=bb.price;			
 }
-void loadData(BookStore &bookStore,string nombreFich){
+void loadData(BookStore &bookStore,string nombreFich, bool &abierto){
 	ifstream fichero;
 	BinBookStore bbs;  
 	BinBook bb;  
 	Book leido;
+	abierto=false; //para saber si no se abre i no mostrar el menú
       	char op;
 	
 	if(nombreFich==""){ //entra si vengo de menu
@@ -469,7 +471,9 @@ void loadData(BookStore &bookStore,string nombreFich){
 			cin.get();
 		}while(op !='N' && op != 'n' && op != 'Y' && op != 'y');
 	}
-	
+	else{
+		op='y';
+	}
 	if(op == 'Y' || op== 'y'){
 		if(nombreFich==""){
 			cout << "Enter filename: ";
@@ -477,6 +481,7 @@ void loadData(BookStore &bookStore,string nombreFich){
 		}
 		fichero.open(nombreFich.c_str(),ios::binary);
 		if(fichero.is_open()){
+			abierto=true;
 			bookStore.books.clear();
 			
 			fichero.read((char *)&bbs, sizeof(bbs));
@@ -500,7 +505,7 @@ void loadData(BookStore &bookStore,string nombreFich){
 
 void bookAbinBook(const Book &b, BinBook &bb){
 	bb.id=b.id;
-	strncpy(bb.title,b.title.c_str(),KMAXSTRING);
+	strncpy(bb.title,b.title.c_str(),KMAXSTRING); //copiar string a cadena de caracteres
 	bb.title[KMAXSTRING-1]='\0';
 
 	strncpy(bb.authors,b.authors.c_str(),KMAXSTRING);
@@ -554,6 +559,7 @@ void showMenuExterior(){
 
 void importExportMenu(BookStore &bookStore){
 	char option;
+	bool ok;
 	do{
 		showMenuExterior();
 		cin >> option;
@@ -561,13 +567,13 @@ void importExportMenu(BookStore &bookStore){
 	
 		switch(option){
 			case '1':
-				importFromCsv(bookStore,"");
+				importFromCsv(bookStore,"",ok);
 			break;
 			case '2':
 				exportToCsv(bookStore);
 			break;
 			case '3':
-				loadData(bookStore,"");
+				loadData(bookStore,"",ok);
 			break;
 			case '4':
 				saveData(bookStore);
@@ -581,8 +587,9 @@ void importExportMenu(BookStore &bookStore){
 	}while(option != 'b');
 }
 
-bool comprobarArgumentos(int argc, char *argv[], string &fichTxt, string &fichBin){
+bool comprobarArgumentos(int argc, char *argv[],BookStore &bookStore){
 	bool ok=false;
+	string fichTxt,fichBin;
 	fichTxt="";
 	fichBin="";
 	if(argc == 1){
@@ -610,17 +617,30 @@ bool comprobarArgumentos(int argc, char *argv[], string &fichTxt, string &fichBi
 					fichBin=argv[4];
 					
 				} 
-			}
-			else{
-				if(strcmp(argv[1], "-l") == 0 && strcmp(argv[3], "-i") == 0){
-					ok=true;
-					fichBin=argv[2];
-					fichTxt=argv[4];
-					ok=true;
-				} 
+				else{
+					if(strcmp(argv[1], "-l") == 0 && strcmp(argv[3], "-i") == 0){
+						fichBin=argv[2];
+						fichTxt=argv[4];
+						ok=true;
+					}	 
+				}
 			}
 		}
 	}
+	if(ok==false){
+		error(ERR_ARGS);
+	}
+	else{
+		if(fichBin != ""){ //si no está vacio lo añado
+			loadData(bookStore, fichBin, ok);
+		}
+		if(ok){
+			if(fichTxt != ""){ //si no está vacio lo añado
+				importFromCsv(bookStore, fichTxt, ok);
+			}
+		}
+	}
+		
 	return ok;
 }
 
@@ -629,30 +649,19 @@ int main(int argc, char *argv[]){
 	bookStore.name = "My Book Store";  //nombre de la libreria
 	bookStore.nextId = 1;              //id automatico para el siguiente libro
   
-  	bool ok; //saber si argumentos están bien
+  	bool ok=false; //saber si argumentos están bien
 	char option;
-	string nomBin, nomTxt;
-	
-	ok=comprobarArgumentos(argc, argv, nomTxt, nomBin);
 
-	if(ok==false){
-		error(ERR_ARGS);
-	}
-	else{
-		if(!nomBin.empty()){ //si no está vacio lo añado
-			loadData(bookStore, nomBin);
-		}
-		if(!nomTxt.empty()){ //si no está vacio lo añado
-			importFromCsv(bookStore, nomTxt);
-		}
+	ok=comprobarArgumentos(argc, argv, bookStore);
+	if(ok){
 		do{
 			showMainMenu();
 			cin >> option;
 			cin.get();
 
 			switch(option){
-					case '1':
-						showCatalog(bookStore);
+				case '1':
+					showCatalog(bookStore);
 					break;
 				case '2':
 					showExtendedCatalog(bookStore);
@@ -671,7 +680,7 @@ int main(int argc, char *argv[]){
 				default:
 					error(ERR_OPTION);
 					break;
-			}
+				}
 		}while(option != 'q');
 	}
 
